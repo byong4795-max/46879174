@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Phone Hand Tracking</title>
+</head>
+
+<body style="margin:0; background:black;">
+
+<video id="video" autoplay playsinline style="display:none;"></video>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<!-- MediaPipe Hands -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
+<script>
+const socket = io();
+
+const videoElement = document.getElementById("video");
+
+const hands = new Hands({
+  locateFile: (file) =>
+    `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
+
+hands.setOptions({
+  maxNumHands: 1,
+  modelComplexity: 1,
+  minDetectionConfidence: 0.7,
+  minTrackingConfidence: 0.7
+});
+
+hands.onResults((results) => {
+
+  if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+
+    let hand = results.multiHandLandmarks[0];
+
+    // 用食指（index finger tip）
+    let finger = hand[8];
+
+    socket.emit("handData", {
+      x: finger.x,
+      y: finger.y
+    });
+  }
+});
+
+const camera = new Camera(videoElement, {
+  onFrame: async () => {
+    await hands.send({ image: videoElement });
+  },
+  width: 640,
+  height: 480
+});
+
+camera.start();
+</script>
+
+</body>
+</html>

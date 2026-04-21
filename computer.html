@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Computer Display</title>
+<script src="libraries/p5.min.js"></script>
+<script src="libraries/p5.sound.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.4.4/libs/lz-string.min.js"></script>
+</head>
+
+<body style="margin:0;">
+<div id="qr" style="position:absolute; top:10px; left:10px;"></div>
+<div id="status" style="position:absolute; top:10px; right:10px; color:white;">等待連接...</div>
+<div style="position:absolute; bottom:10px; left:10px; color:white;">
+  <p>掃描手機QR碼後，輸入內容：</p>
+  <input type="text" id="signalInput" style="width:300px;">
+  <button onclick="setSignal()">設置信號</button>
+</div>
+<script>
+let peer;
+let hand = { x: 0.5, y: 0.5 };
+let beads = [];
+
+class Bead {
+  constructor(x, y) {
+    this.homeX = x;
+    this.homeY = y;
+    this.x = x;
+    this.y = y;
+    this.size = 20;
+    this.color = color(random(255), random(255), random(255));
+  }
+
+  update() {
+    let hx = hand.x * width;
+    let hy = hand.y * height;
+    let d = dist(hx, hy, this.x, this.y);
+    if (d < 100) {
+      let angle = atan2(this.y - hy, this.x - hx);
+      this.x = hx + cos(angle) * 150;
+      this.y = hy + sin(angle) * 150;
+    } else {
+      this.x = lerp(this.x, this.homeX, 0.05);
+      this.y = lerp(this.y, this.homeY, 0.05);
+    }
+  }
+
+  display() {
+    fill(this.color);
+    noStroke();
+    circle(this.x, this.y, this.size);
+  }
+}
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+
+  for (let i = 0; i < 50; i++) {
+    let x = random(width);
+    let y = random(height);
+    beads.push(new Bead(x, y));
+  }
+
+  // WebRTC setup
+  peer = new SimplePeer({ initiator: true, trickle: false });
+
+  peer.on('signal', data => {
+    const signalData = LZString.compressToEncodedURIComponent(JSON.stringify(data));
+    document.getElementById("qr").innerHTML = "";
+    new QRCode(document.getElementById("qr"), {
+      text: `${location.origin}/phone.html?signal=${signalData}`,
+      width: 200,
+      height: 200,
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  });
+
+  peer.on('connect', () => {
+    document.getElementById("status").innerHTML = "已連接";
+    document.getElementById("qr").style.display = "none";
+  });
+
+  peer.on('data', data => {
+    hand = JSON.parse(data);
+  });
+
+  peer.on('error', err => {
+    console.error('WebRTC error:', err);
+  });
+}
+
+function draw() {
+  background(0);
+
+  for (let bead of beads) {
+    bead.update();
+    bead.display();
+  }
+}
+
+// 處理手機的signal
+function handlePhoneSignal(signal) {
+  peer.signal(signal);
+}
+
+function setSignal() {
+  const signalText = document.getElementById("signalInput").value;
+  try {
+    const signal = JSON.parse(LZString.decompressFromEncodedURIComponent(signalText));
+    peer.signal(signal);
+  } catch (e) {
+    alert("無效的信號數據");
+  }
+}
+
+window.handlePhoneSignal = handlePhoneSignal;
+</script>
+</body>
+</html>

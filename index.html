@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Beads Game</title>
+</head>
+
+<body style="margin:0; overflow:hidden; background:black;">
+
+<div id="qr" style="position:absolute; top:10px; left:10px;"></div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<script>
+let url = location.origin + "/phone.html";
+new QRCode(document.getElementById("qr"), url);
+</script>
+
+<script src="sketch.js"></script>
+</body>
+</html>
